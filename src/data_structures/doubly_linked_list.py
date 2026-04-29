@@ -6,6 +6,10 @@ class Node:
 
 
 class DoublyLinkedList:
+    """
+    A doubly linked list used to maintain transaction history timeline.
+     Supports efficient insertion, deletion, and traversal in both directions.
+    """
     def __init__(self):
         self.head = None
         self.tail = None

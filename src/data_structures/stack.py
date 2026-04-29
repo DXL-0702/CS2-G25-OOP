@@ -1,7 +1,10 @@
 from .doubly_linked_list import DoublyLinkedList
 
-
 class Stack:
+    """
+    A LIFO (Last-In-First-Out) stack for undo operations.
+    Stores operations to support rollback of financial actions.
+    """
     def __init__(self):
         self.dll = DoublyLinkedList()
 

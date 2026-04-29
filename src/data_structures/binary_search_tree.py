@@ -11,6 +11,10 @@ class BSTNode:
 
 
 class BinarySearchTree:
+    """
+    A binary search tree optimized for amount range queries.
+    Maintains sorted order to support efficient range-based lookups.
+    """
     def __init__(self):
         self.root = None
 

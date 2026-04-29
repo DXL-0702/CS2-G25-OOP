@@ -1,4 +1,8 @@
 class HashTable:
+    """
+    A hash table for fast ID-based lookup of financial records.
+    Provides average O(1) time complexity for insert, get, and delete operations.
+    """
     def __init__(self, size=10):
         if size <= 0:
             raise ValueError("Hash table size must be positive")

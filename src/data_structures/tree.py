@@ -10,6 +10,10 @@ class TreeNode:
 
 
 class Tree:
+    """
+    A general-purpose tree structure for category hierarchy.
+    Supports recursive traversal to organize financial categories.
+    """
     def __init__(self, root_data):
         self.root = TreeNode(root_data)
 

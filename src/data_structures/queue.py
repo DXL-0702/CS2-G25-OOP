@@ -2,6 +2,10 @@ from .doubly_linked_list import DoublyLinkedList
 
 
 class Queue:
+    """
+    A FIFO (First-In-First-Out) queue for pending transactions.
+    Processes transactions in the order they are received.
+    """
     def __init__(self):
         self.dll = DoublyLinkedList()
 
