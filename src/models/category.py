@@ -20,3 +20,14 @@ class CategoryNode:
             'parent_id': self.parent_id,
             'children': [child.to_dict() for child in self.children]
         }
+
+    @classmethod
+    def from_dict(cls, data):
+        category = cls(
+            category_id=data["category_id"],
+            name=data["name"],
+            parent_id=data.get("parent_id"),
+        )
+        for child_data in data.get("children", []):
+            category.add_child(cls.from_dict(child_data))
+        return category
