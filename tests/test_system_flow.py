@@ -118,3 +118,50 @@ def test_save_and_load_restores_system_state(tmp_path):
     assert loaded_system.validate_audit_chain() is True
     assert loaded_system.pending_manager.transaction_manager is loaded_system.transaction_manager
     assert loaded_system.undo_manager.transaction_manager is loaded_system.transaction_manager
+
+
+def test_finance_system_update_and_delete_account_write_audit(tmp_path):
+    system = create_system(tmp_path)
+    system.create_account("cash", "Cash Wallet", "cash", balance=100)
+
+    updated = system.update_account("cash", name="Daily Cash", balance=150)
+    deleted = system.delete_account("cash")
+
+    assert updated.name == "Daily Cash"
+    assert deleted.account_id == "cash"
+    assert [block.operation_type for block in system.list_audit_blocks()] == [
+        "create_account",
+        "update_account",
+        "delete_account",
+    ]
+    assert system.validate_audit_chain() is True
+
+
+def test_finance_system_update_and_delete_transaction_write_audit(tmp_path):
+    system = create_system(tmp_path)
+    system.create_account("cash", "Cash Wallet", "cash", balance=100)
+    system.add_expense_transaction("tx-1", 20, "cash", "food")
+
+    updated = system.update_transaction("tx-1", amount=40)
+    deleted = system.delete_transaction("tx-1")
+
+    assert updated.amount == 40
+    assert deleted.transaction_id == "tx-1"
+    assert system.get_account("cash").balance == 100
+    assert [block.operation_type for block in system.list_audit_blocks()] == [
+        "create_account",
+        "create_transaction",
+        "update_transaction",
+        "delete_transaction",
+    ]
+    assert system.validate_audit_chain() is True
+
+
+def test_finance_system_pending_wrappers(tmp_path):
+    system = create_system(tmp_path)
+    system.create_account("cash", "Cash Wallet", "cash", balance=100)
+
+    pending = system.create_pending_income_transaction("tx-1", 50, "cash", "salary")
+
+    assert system.peek_pending_transaction() is pending
+    assert system.list_pending_transactions() == [pending]

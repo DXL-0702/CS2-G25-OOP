@@ -57,6 +57,37 @@ class FinanceSystem:
     def list_accounts(self):
         return self.account_manager.list_accounts()
 
+    def update_account(
+        self,
+        account_id,
+        name=None,
+        account_type=None,
+        balance=None,
+        currency=None,
+    ):
+        account = self.account_manager.update_account(
+            account_id=account_id,
+            name=name,
+            account_type=account_type,
+            balance=balance,
+            currency=currency,
+        )
+        self.audit_manager.add_block(
+            "update_account",
+            account_id,
+            account.to_dict(),
+        )
+        return account
+
+    def delete_account(self, account_id):
+        account = self.account_manager.delete_account(account_id)
+        self.audit_manager.add_block(
+            "delete_account",
+            account_id,
+            account.to_dict(),
+        )
+        return account
+
     def add_income_transaction(
         self,
         transaction_id,
@@ -122,6 +153,24 @@ class FinanceSystem:
     def list_transactions(self):
         return self.transaction_manager.list_transactions()
 
+    def update_transaction(self, transaction_id, **fields):
+        transaction = self.transaction_manager.update_transaction(transaction_id, **fields)
+        self.audit_manager.add_block(
+            "update_transaction",
+            transaction_id,
+            transaction.to_dict(),
+        )
+        return transaction
+
+    def delete_transaction(self, transaction_id):
+        transaction = self.transaction_manager.delete_transaction(transaction_id)
+        self.audit_manager.add_block(
+            "delete_transaction",
+            transaction_id,
+            transaction.to_dict(),
+        )
+        return transaction
+
     def search_transactions_by_amount(self, minimum, maximum):
         return self.transaction_manager.search_by_amount_range(minimum, maximum)
 
@@ -176,6 +225,74 @@ class FinanceSystem:
     def enqueue_pending_transaction(self, transaction):
         return self.pending_manager.enqueue_transaction(transaction)
 
+    def create_pending_income_transaction(
+        self,
+        transaction_id,
+        amount,
+        account_id,
+        category,
+        description="",
+        date=None,
+    ):
+        return self.enqueue_pending_transaction(
+            IncomeTransaction(
+                transaction_id=transaction_id,
+                amount=amount,
+                account_id=account_id,
+                category=category,
+                description=description,
+                date=date,
+            )
+        )
+
+    def create_pending_expense_transaction(
+        self,
+        transaction_id,
+        amount,
+        account_id,
+        category,
+        description="",
+        date=None,
+    ):
+        return self.enqueue_pending_transaction(
+            ExpenseTransaction(
+                transaction_id=transaction_id,
+                amount=amount,
+                account_id=account_id,
+                category=category,
+                description=description,
+                date=date,
+            )
+        )
+
+    def create_pending_transfer_transaction(
+        self,
+        transaction_id,
+        amount,
+        source_account_id,
+        target_account_id,
+        category,
+        description="",
+        date=None,
+    ):
+        return self.enqueue_pending_transaction(
+            TransferTransaction(
+                transaction_id=transaction_id,
+                amount=amount,
+                source_account_id=source_account_id,
+                target_account_id=target_account_id,
+                category=category,
+                description=description,
+                date=date,
+            )
+        )
+
+    def peek_pending_transaction(self):
+        return self.pending_manager.peek_next()
+
+    def list_pending_transactions(self):
+        return self.pending_manager.list_pending()
+
     def process_next_pending(self):
         transaction = self.pending_manager.process_next()
         if transaction is not None:
@@ -199,6 +316,9 @@ class FinanceSystem:
                 },
             )
         return transaction
+
+    def list_audit_blocks(self):
+        return self.audit_manager.list_blocks()
 
     def validate_audit_chain(self):
         return self.audit_manager.validate_chain()
