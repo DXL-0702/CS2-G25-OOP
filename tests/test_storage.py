@@ -171,6 +171,59 @@ def test_load_invalid_json_raises_data_storage_error(tmp_path):
         storage.load()
 
 
+def test_load_category_with_missing_parent_raises_data_storage_error(tmp_path):
+    storage = JsonStorage(tmp_path / "system_state.json")
+    storage.file_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "accounts": [],
+                "transactions": [],
+                "categories": [
+                    {
+                        "category_id": "restaurant",
+                        "name": "Restaurant",
+                        "parent_id": "missing-parent",
+                    }
+                ],
+                "budgets": [],
+                "audit_blocks": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DataStorageError):
+        storage.load()
+
+
+def test_load_account_with_missing_required_field_raises_data_storage_error(tmp_path):
+    storage = JsonStorage(tmp_path / "system_state.json")
+    storage.file_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "accounts": [
+                    {
+                        "account_id": "cash",
+                        "account_type": "cash",
+                        "balance": 100,
+                        "currency": "USD",
+                    }
+                ],
+                "transactions": [],
+                "categories": [],
+                "budgets": [],
+                "audit_blocks": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DataStorageError):
+        storage.load()
+
+
 def test_category_node_from_dict_restores_children():
     category = CategoryNode.from_dict(
         {

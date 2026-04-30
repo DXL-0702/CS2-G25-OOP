@@ -1,3 +1,11 @@
+import pytest
+
+from src.exceptions import (
+    InsufficientFundsError,
+    InvalidAmountError,
+    RecordNotFoundError,
+    ValidationError,
+)
 from src.managers import (
     AccountManager,
     AuditManager,
@@ -165,3 +173,102 @@ def test_finance_system_pending_wrappers(tmp_path):
 
     assert system.peek_pending_transaction() is pending
     assert system.list_pending_transactions() == [pending]
+
+
+def test_finance_system_rejects_negative_account_balance_without_audit(tmp_path):
+    system = create_system(tmp_path)
+
+    with pytest.raises(InvalidAmountError):
+        system.create_account("bad", "Bad Account", "cash", balance=-1)
+
+    assert system.list_accounts() == []
+    assert system.list_audit_blocks() == []
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda system: system.add_income_transaction("tx-1", 0, "cash", "salary"),
+        lambda system: system.add_expense_transaction("tx-1", -10, "cash", "food"),
+        lambda system: system.add_transfer_transaction("tx-1", 0, "cash", "bank", "transfer"),
+    ],
+)
+def test_finance_system_rejects_non_positive_transactions_without_state_change(tmp_path, operation):
+    system = create_system(tmp_path)
+    system.create_account("cash", "Cash Wallet", "cash", balance=100)
+    system.create_account("bank", "Bank Account", "bank", balance=500)
+
+    with pytest.raises(InvalidAmountError):
+        operation(system)
+
+    assert system.get_account("cash").balance == 100
+    assert system.get_account("bank").balance == 500
+    assert system.list_transactions() == []
+    assert [block.operation_type for block in system.list_audit_blocks()] == [
+        "create_account",
+        "create_account",
+    ]
+
+
+def test_finance_system_rejects_insufficient_funds_without_state_change(tmp_path):
+    system = create_system(tmp_path)
+    system.create_account("cash", "Cash Wallet", "cash", balance=100)
+    system.create_account("bank", "Bank Account", "bank", balance=50)
+
+    with pytest.raises(InsufficientFundsError):
+        system.add_expense_transaction("tx-1", 150, "cash", "food")
+    with pytest.raises(InsufficientFundsError):
+        system.add_transfer_transaction("tx-2", 80, "bank", "cash", "transfer")
+
+    assert system.get_account("cash").balance == 100
+    assert system.get_account("bank").balance == 50
+    assert system.list_transactions() == []
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda system: system.add_income_transaction("tx-1", 50, "missing", "salary"),
+        lambda system: system.add_expense_transaction("tx-1", 20, "missing", "food"),
+        lambda system: system.add_transfer_transaction("tx-1", 20, "missing", "cash", "transfer"),
+        lambda system: system.add_transfer_transaction("tx-1", 20, "cash", "missing", "transfer"),
+    ],
+)
+def test_finance_system_rejects_transactions_with_missing_accounts(tmp_path, operation):
+    system = create_system(tmp_path)
+    system.create_account("cash", "Cash Wallet", "cash", balance=100)
+
+    with pytest.raises(RecordNotFoundError):
+        operation(system)
+
+    assert system.get_account("cash").balance == 100
+    assert system.list_transactions() == []
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        lambda system: system.get_transaction("missing"),
+        lambda system: system.update_transaction("missing", amount=20),
+        lambda system: system.delete_transaction("missing"),
+    ],
+)
+def test_finance_system_rejects_missing_transaction_operations(tmp_path, operation):
+    system = create_system(tmp_path)
+
+    with pytest.raises(RecordNotFoundError):
+        operation(system)
+
+
+@pytest.mark.parametrize(
+    "minimum,maximum,expected_error",
+    [
+        (-1, 100, InvalidAmountError),
+        (100, 10, ValidationError),
+    ],
+)
+def test_finance_system_rejects_invalid_amount_ranges(tmp_path, minimum, maximum, expected_error):
+    system = create_system(tmp_path)
+
+    with pytest.raises(expected_error):
+        system.search_transactions_by_amount(minimum, maximum)
